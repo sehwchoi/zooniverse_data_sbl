@@ -35,7 +35,8 @@ with open(out_location, 'w', newline='') as file:
                   'classification_id',
                   'created_at',
                   'testresult_exist',
-                  'testresult_list']
+                  'testresult_list',
+                  'testresult_classify']
 
     writer = csv.DictWriter(file, fieldnames=fieldnames)
     writer.writeheader()
@@ -45,6 +46,9 @@ with open(out_location, 'w', newline='') as file:
     j = 0
     #name_list = load_pick_ip()
     task_answer_template_1 = ['Yes', 'No']
+    task_answer_template_3 = ['Map', 'Letter/Communication', 'City Directory', 'Photograph', 'Graph',
+                              'Signed Form', 'Receipt/Invoice/Financial Statement', 'Report (Government or Private)',
+                              'Other/Unknown']
     with open(location) as f:
         r = csv.DictReader(f)
         for row in r:
@@ -67,7 +71,7 @@ with open(out_location, 'w', newline='') as file:
 
                 task_vector_1 = [0, 0]
                 task_answer_2 = ''
-                task_answer_3 = ''
+                task_vector_3 = [0, 0, 0, 0, 0, 0, 0, 0, 0]
 
                 for task in annotations:
                     # Even though the first question only allows single answers we will use Block 4 - Multiple-
@@ -82,6 +86,7 @@ with open(out_location, 'w', newline='') as file:
                     except (TypeError, KeyError):
                         task_vector_1 = ''
                         continue
+
                     # The second question is a single required answer with short answers that need no massaging
                     try:
                         if 'T1' == task['task']:
@@ -89,19 +94,15 @@ with open(out_location, 'w', newline='') as file:
                                 task_answer_2 = str(task['value'])
                     except KeyError:
                         continue
-                    # The third question is also a simple single answer. These are short answers except for one
-                    # we will shorten:
-                    """
+                    # The third question
                     try:
-                        if 'made of' in task['task_label']:
-                            if task['value'] is not None:
-                                task_answer_3 = str(task['value'])
-                                if task_answer_3.find('Silt') >= 0:
-                                    task_answer_3 = 'Mud'
-                    except KeyError:
+                        if 'T3' == task['task']:
+                            for task_value in task['value']:
+                                if task_value in task_answer_template_3:
+                                    k = task_answer_template_3.index(task_value)
+                                    task_vector_3[k] = 1
+                    except (TypeError, KeyError):
                         continue
-                    """
-                task_vector_1 = json.dumps(task_vector_1)
 
                 # Writer must agree with open field names and assign correct values to the fields
                 writer.writerow({'line_number': str(i),
@@ -112,9 +113,9 @@ with open(out_location, 'w', newline='') as file:
                                  'classification_id': row['classification_id'],
                                  'created_at': row['created_at'],
                                  'testresult_exist': task_vector_1,
-                                 'testresult_list': task_answer_2})
+                                 'testresult_list': task_answer_2,
+                                 'testresult_classify': task_vector_3})
             print(i, j)
         # Area to print final status report
         print(i, 'lines read and inspected', j, 'records processed and copied')
 
-        #
